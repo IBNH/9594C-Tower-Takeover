@@ -21,28 +21,6 @@ vex::competition Competition;
 
 // define your global instances of motors and other devices here
 
-vex::motor DRIVE_RF = vex::motor(PORT1, true);
-vex::motor DRIVE_RB = vex::motor(PORT7, true);
-vex::motor DRIVE_LF = vex::motor(PORT2, false);
-vex::motor DRIVE_LB = vex::motor(PORT10, false);
-
-vex::motor RAMP = vex::motor(PORT19, false);
-
-vex::pwm_out Led1 = vex::pwm_out(Brain.ThreeWirePort.B);
-
-vex::encoder encoderL = vex::encoder(Brain.ThreeWirePort.F);
-vex::encoder encoderR = vex::encoder(Brain.ThreeWirePort.C);
-vex::encoder encoderB = vex::encoder(Brain.ThreeWirePort.D);
-
-vex::motor INTAKE_R = vex::motor(PORT6);
-vex::motor INTAKE_L = vex::motor(PORT8, true);
-
-vex::motor ARM = vex::motor(PORT9);
-
-vex::percentUnits;
-
-
-vex::controller controller1 = vex::controller();
 
 
 
@@ -306,22 +284,19 @@ while(fabs(pidErrorL) > 0.03 || fabs(pidErrorR) > 0.03 ){
             if( pidDriveR < PID_DRIVE_MIN )
                 pidDriveR = PID_DRIVE_MIN;
           
-           
-              
-              
-
-  }else{
-pidDriveR = 0;
-  }
+            }else{
+            pidDriveR = 0;
+          }
             // send to motor
             drive(pidDriveL * speed1, pidDriveR * speed2);
             }
 
 }
 
-void pidRamp(){
+
+int pidRamp(){
   RAMP.resetRotation();
-    double distance = -1.3;
+    double distance = -2.8;
 
   static float PID_INTEGRAL_LIMIT = 50;
   static int PID_DRIVE_MAX = 127;
@@ -376,28 +351,19 @@ if( pid_Ki != 0 )
             // send to motor
             run(RAMP, pidDrive );
             }
-        sleep(750);
-}
+              RAMP.resetRotation();
 
+    distance = -1.5;
 
-void pidRamp2(){
-  RAMP.resetRotation();
-    double distance = -1;
+    encoderValue = 0;
+    pid_Kp = 2.0;
+    pid_Ki = 0.04;
+    pid_Kd = 0.0;
 
-  static float PID_INTEGRAL_LIMIT = 50;
-  static int PID_DRIVE_MAX = 127;
-  static int PID_DRIVE_MIN = -127;
-
-  float  encoderValue = 0;
-  float  pid_Kp = 2.0;
-  float  pid_Ki = 0.04;
-  float  pid_Kd = 0.0;
-
-  float  pidError = 1000;
-  float  pidLastError = 0;
-  float  pidIntegral = 0;
-  float  pidDerivative = 0;
-  float  pidDrive;
+    pidError = 1000;
+    pidLastError = 0;
+    pidIntegral = 0;
+    pidDerivative = 0;
 
 pidLastError  = 0;
 pidIntegral   = 0;
@@ -438,7 +404,73 @@ if( pid_Ki != 0 )
             run(RAMP, pidDrive * 0.5 );
             }
         sleep(750);
+
+        RAMP.resetRotation();
+  
+        return 0;
 }
+
+
+void pidMotor(motor motor, double distance, double speed){
+  motor.resetRotation();
+
+
+  static float PID_INTEGRAL_LIMIT = 50;
+  static int PID_DRIVE_MAX = 127;
+  static int PID_DRIVE_MIN = -127;
+
+  float  encoderValue = 0;
+  float  pid_Kp = 2.0;
+  float  pid_Ki = 0.04;
+  float  pid_Kd = 0.0;
+
+  float  pidError = 1000;
+  float  pidLastError = 0;
+  float  pidIntegral = 0;
+  float  pidDerivative = 0;
+  float  pidDrive;
+
+pidLastError  = 0;
+pidIntegral   = 0;
+
+while(fabs(pidError) > 0.03){
+
+encoderValue = -motor.rotation(vex::rotationUnits (rev));
+
+
+pidError = encoderValue - distance;
+
+
+if( pid_Ki != 0 )
+                {
+                // If we are inside controlable window then integrate the error
+                if( fabs(pidError) < PID_INTEGRAL_LIMIT )
+                    pidIntegral = pidIntegral + pidError;
+                else
+                    pidIntegral = 0;
+                }
+            else
+                pidIntegral = 0;
+
+            // calculate the derivative
+            pidDerivative = pidError - pidLastError;
+            pidLastError  = pidError;
+
+            // calculate drive
+            pidDrive = (pid_Kp * pidError) + (pid_Ki * pidIntegral) + (pid_Kd * pidDerivative);
+
+            // limit drive
+            if( pidDrive > PID_DRIVE_MAX )
+                pidDrive = PID_DRIVE_MAX;
+            if( pidDrive < PID_DRIVE_MIN )
+                pidDrive = PID_DRIVE_MIN;
+
+            // send to motor
+            run(motor, pidDrive * speed);
+            }
+        sleep(750);
+}
+
 
 double encL(){
  return 0;
@@ -550,9 +582,9 @@ if(autoSide == 1){
 }
 
 */
-/*
+
 run(RAMP, 100);
-sleep(500);
+sleep(600);
 
 run(RAMP, 0);
 
@@ -564,10 +596,11 @@ run(INTAKE_L, INTAKE_R, 0);
 run(ARM, 200);
 sleep(800);
 run(ARM, -200);
-sleep(600);
+sleep(800);
+run(ARM, 0);
 
 run(RAMP, -100);
-sleep(300);
+sleep(400);
 run(RAMP, 0);
 
 
@@ -575,22 +608,39 @@ run(RAMP, 0);
 
 drive(0, 0);
 
+
+
 run(INTAKE_L, INTAKE_R, -300);
-*/
-pidDrive(2.5, .6, .6);
+
+pidDrive(2, .6, .6);
 
 drive(0,0);
 
 sleep(100);
 
 
-
-pidDrive(-3.25, -2.25, 3, 0.75);
+pidDrive(-3.2, -1.5, 3, .75);
 //pidDrive(2, 0.5, 1, 0.5);
 
-run(INTAKE_L, INTAKE_R, 0);
+run(INTAKE_L, INTAKE_R, -300);
 
 drive(0,0);
+
+pidDrive(.7, -.7, 1, 1);
+drive(0, 0);
+sleep(250);
+pidDrive(1.75, 1.75, 1, 1);
+drive(0,0);
+sleep(250);
+
+
+run(INTAKE_L, INTAKE_R, 0);
+pidDrive(-1.2, 1.2, 1, 1);
+drive(0, 0);
+
+pidDrive(2.4, 2.4, 1, 1);
+
+//pidDrive(2, 2, 1, 1);
 
 
 /*
@@ -637,9 +687,7 @@ run(DRIVE_RF, 0);
 void usercontrol( void ) {
 
    int count = 0;
-
-
-  while (1) {
+while (1) {
 
 
 Led1.state(100,vex::percentUnits::pct);
@@ -659,7 +707,7 @@ count++;
 */
 
 
-/*]
+/*
 controller1.Screen.clearScreen();
 controller1.Screen.setCursor(1,1);
 controller1.Screen.print(INTAKE_L.temperature(pct));
@@ -743,16 +791,15 @@ if(controller1.ButtonR1.pressing()){
 
 //---------------------------[Ramp Control]---------------------------
 
-if(controller1.ButtonX.pressing()){
-  pidRamp();
-  pidRamp2();
-}else if(controller1.ButtonB.pressing()){
+if(controller1.ButtonX.pressing())
+  vex::task ramp(pidRamp);
+else if(controller1.ButtonB.pressing())
   run(RAMP, -200);
-}else if(controller1.ButtonY.pressing()){
+else if(controller1.ButtonY.pressing())
   run(RAMP, 100);
-}else{
+else
   RAMP.stop(hold);
-}
+
 //---------------------------[Intake Control]---------------------------
 
 if(controller1.ButtonL1.pressing()){
@@ -774,27 +821,13 @@ if(controller1.ButtonL1.pressing()){
 //----------------------------------------------------[Alerting Systems]----------------------------------------------------
 
 //battery
-int batteryAlert(){
-    while(1){
-        if (Brain.Battery.capacity(percentUnits::pct) <= 20){
-            Brain.Screen.clearScreen(color::orange);
-            controller1.Screen.clearScreen();
-            vex::task::sleep(250);
-            Brain.Screen.printAt(90, 135, ">> RECHARGE BATTERY <<");
-            controller1.rumble("-");
-            controller1.Screen.setCursor(1, 7);
-            controller1.Screen.print("RECHARGE");
-            controller1.Screen.setCursor(2, 8);
-            controller1.Screen.print("BATTERY");
-            vex::task::sleep(500);
-        }
-    vex::task::sleep(500);
-    }
-}
+
 
 //intake
-int intakeTempAlert(){
+int Alert(){
+  int warning = 0;
     while(1){
+      
         if (INTAKE_L.temperature(pct) >= 70.00){ //psat 70 it can only pickup 5 and wont be able to stack alot
             Brain.Screen.clearScreen(color::red);
             controller1.Screen.clearScreen();
@@ -806,19 +839,52 @@ int intakeTempAlert(){
             controller1.Screen.setCursor(2, 8);
             controller1.Screen.print("MOTOR");
             vex::task::sleep(500);
+            
         }
-    vex::task::sleep(500);
+         if (Brain.Battery.capacity(percentUnits::pct) <= 20){
+            Brain.Screen.clearScreen(color::orange);
+            controller1.Screen.clearScreen();
+            vex::task::sleep(250);
+            Brain.Screen.printAt(90, 135, ">> RECHARGE BATTERY <<");
+  
+            controller1.Screen.setCursor(1, 7);
+            controller1.Screen.print("RECHARGE");
+            controller1.Screen.setCursor(2, 8);
+            controller1.Screen.print("BATTERY");
+            vex::task::sleep(500);
+            if(warning < 5)
+            controller1.rumble("-");
+            warning++;
+         }
+        
+  controller1.Screen.clearScreen();
+
+  controller1.Screen.setCursor(1,1);
+  controller1.Screen.print(INTAKE_L.temperature(pct));
+
+  controller1.Screen.setCursor(1,10);
+  controller1.Screen.print(INTAKE_R.temperature(pct));
+
+  controller1.Screen.setCursor(2, 1);
+  controller1.Screen.print("Battery Cap: %d%%", Brain.Battery.capacity());
+
+    vex::task::sleep(1000);
+    
     }
+
 }
+/*
+int rampControl(){
 
-
+}
+*/
 
 //----------------------------------------------------[INT MAIN]----------------------------------------------------
 int main() {
     //Set up callbacks for autonomous and driver control periods.
 
-    vex::task alert(batteryAlert);
-    vex::task alert1(intakeTempAlert);
+    vex::task alert(Alert);
+    //vex::task ramp(rampControl);
 
     Competition.autonomous( autonomous );
     Competition.drivercontrol( usercontrol );
